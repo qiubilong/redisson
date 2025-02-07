@@ -58,13 +58,13 @@ public class RedissonLock extends RedissonBaseLock {
     }
 
     String getChannelName() {
-        return prefixName("redisson_lock__channel", getRawName());
+        return prefixName("redisson_lock__channel", getRawName());/* 锁释放广播频道 */
     }
 
     @Override
     public void lock() {
         try {
-            lock(-1, null, false);
+            lock(-1, null, false);/* -1表示永久持久*/
         } catch (InterruptedException e) {
             throw new IllegalStateException();
         }
@@ -89,15 +89,15 @@ public class RedissonLock extends RedissonBaseLock {
     public void lockInterruptibly(long leaseTime, TimeUnit unit) throws InterruptedException {
         lock(leaseTime, unit, true);
     }
-
+    /* leaseTime=-1 表示永久占有锁，直到手动释放 */
     private void lock(long leaseTime, TimeUnit unit, boolean interruptibly) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
-        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);
+        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 获取分布式核心代码 */
         // lock acquired
-        if (ttl == null) {
+        if (ttl == null) {/* 返回空，表示获取分布式锁成功 */
             return;
         }
-
+        /* 获取锁失败时，订阅锁释放消息 */
         CompletableFuture<RedissonLockEntry> future = subscribe(threadId);
         pubSub.timeout(future);
         RedissonLockEntry entry;
