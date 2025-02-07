@@ -53,12 +53,12 @@ public class RedissonLock extends RedissonBaseLock {
     public RedissonLock(CommandAsyncExecutor commandExecutor, String name) {
         super(commandExecutor, name);
         this.commandExecutor = commandExecutor;
-        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();
-        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub();
+        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认  30 * 1000; */
+        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 锁释放，订阅监听器 */
     }
 
     String getChannelName() {
-        return prefixName("redisson_lock__channel", getRawName());/* 锁释放广播频道 */
+        return prefixName("redisson_lock__channel", getRawName());/* 锁释放频道 */
     }
 
     @Override
@@ -92,7 +92,7 @@ public class RedissonLock extends RedissonBaseLock {
     /* leaseTime=-1 表示永久占有锁，直到手动释放 */
     private void lock(long leaseTime, TimeUnit unit, boolean interruptibly) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
-        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 获取分布式核心代码 */
+        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 尝试获取分布式锁 */
         // lock acquired
         if (ttl == null) {/* 返回空，表示获取分布式锁成功 */
             return;
@@ -109,14 +109,14 @@ public class RedissonLock extends RedissonBaseLock {
 
         try {
             while (true) {
-                ttl = tryAcquire(-1, leaseTime, unit, threadId);
+                ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 尝试获取分布式锁 */
                 // lock acquired
-                if (ttl == null) {
+                if (ttl == null) {//获锁成功
                     break;
                 }
 
                 // waiting for message
-                if (ttl >= 0) {
+                if (ttl >= 0) { /* 获取分布式锁失败时，限时ttl锁过期时间 挂起等待 */
                     try {
                         entry.getLatch().tryAcquire(ttl, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException e) {
@@ -134,7 +134,7 @@ public class RedissonLock extends RedissonBaseLock {
                 }
             }
         } finally {
-            unsubscribe(entry, threadId);
+            unsubscribe(entry, threadId);/* 获取锁成功，取消订阅 */
         }
 //        get(lockAsync(leaseTime, unit));
     }

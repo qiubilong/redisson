@@ -24,7 +24,7 @@ import java.util.concurrent.locks.Lock;
  *
  * @author Nikita Koksharov
  *
- */
+ */             /* RLock == re-entrant lock == 重入锁 */
 public interface RLock extends Lock, RLockAsync {
 
     /**

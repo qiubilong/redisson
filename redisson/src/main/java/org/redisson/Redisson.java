@@ -66,7 +66,7 @@ public class Redisson implements RedissonClient {
         this.config = config;
         Config configCopy = new Config(config);
 
-        connectionManager = ConfigSupport.createConnectionManager(configCopy);
+        connectionManager = ConfigSupport.createConnectionManager(configCopy);//连接池
         RedissonObjectBuilder objectBuilder = null;
         if (config.isReferenceEnabled()) {
             objectBuilder = new RedissonObjectBuilder(this);
@@ -114,7 +114,7 @@ public class Redisson implements RedissonClient {
         return new Redisson(config);
     }
 
-    /*
+    /**
      * Use Redisson.create().rxJava() method instead
      */
     @Deprecated
@@ -124,7 +124,7 @@ public class Redisson implements RedissonClient {
         return createRx(config);
     }
 
-    /*
+    /**
      * Use Redisson.create(config).rxJava() method instead
      */
     @Deprecated
@@ -137,7 +137,7 @@ public class Redisson implements RedissonClient {
         return new RedissonRx(connectionManager, evictionScheduler, writeBehindService, responses);
     }
 
-    /*
+    /**
      * Use Redisson.create().reactive() method instead
      */
     @Deprecated
@@ -147,7 +147,7 @@ public class Redisson implements RedissonClient {
         return createReactive(config);
     }
 
-    /*
+    /**
      * Use Redisson.create(config).reactive() method instead
      */
     @Deprecated
@@ -356,9 +356,9 @@ public class Redisson implements RedissonClient {
     public <K, V> RMap<K, V> getMap(String name, Codec codec, MapOptions<K, V> options) {
         return new RedissonMap<K, V>(codec, commandExecutor, name, this, options, writeBehindService);
     }
-
+    /* 创建分布式锁（R代表可重入） */
     @Override
-    public RLock getLock(String name) {
+    public RLock getLock(String name) { //name锁名字
         return new RedissonLock(commandExecutor, name);
     }
 

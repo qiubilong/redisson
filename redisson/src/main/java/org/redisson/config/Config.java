@@ -68,7 +68,7 @@ public class Config {
 
     private EventLoopGroup eventLoopGroup;
 
-    private long lockWatchdogTimeout = 30 * 1000;
+    private long lockWatchdogTimeout = 30 * 1000; /* 看门狗，延长锁时间 */
 
     private boolean checkLockSyncedSlaves = true;
 
