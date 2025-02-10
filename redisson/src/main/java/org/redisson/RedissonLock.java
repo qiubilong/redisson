@@ -114,7 +114,7 @@ public class RedissonLock extends RedissonExpirable implements RLock {
         long threadId = Thread.currentThread().getId();
         Long ttl = tryAcquire(leaseTime, unit, threadId);
         // lock acquired
-        if (ttl == null) {
+        if (ttl == null) {/* 获取成功 */
             return;
         }
 
