@@ -340,7 +340,7 @@ public class Redisson implements RedissonClient {
     }
 
     @Override
-    public RLock getLock(String name) {
+    public RLock getLock(String name) { /* 创建可重入分布式锁 */
         return new RedissonLock(connectionManager.getCommandExecutor(), name);
     }
 

@@ -39,21 +39,21 @@ import io.netty.util.internal.PlatformDependent;
 abstract class PublishSubscribe<E extends PubSubEntry<E>> {
 
     private final ConcurrentMap<String, E> entries = PlatformDependent.newConcurrentHashMap();
-
+    /* 取消解锁消息订阅 */
     public void unsubscribe(final E entry, final String entryName, final String channelName, final PublishSubscribeService subscribeService) {
         final AsyncSemaphore semaphore = subscribeService.getSemaphore(channelName);
         semaphore.acquire(new Runnable() {
             @Override
             public void run() {
-                if (entry.release() == 0) {
+                if (entry.release() == 0) {/* 锁订阅等待数减1 */
                     // just an assertion
                     boolean removed = entries.remove(entryName) == entry;
                     if (!removed) {
                         throw new IllegalStateException();
                     }
-                    subscribeService.unsubscribe(channelName, semaphore);
+                    subscribeService.unsubscribe(channelName, semaphore);  /* 没有锁等待者后，取消订阅 */
                 } else {
-                    semaphore.release();
+                    semaphore.release(); /* 执行异步限流中的下一个任务 */
                 }
             }
         });
@@ -63,10 +63,10 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
     public E getEntry(String entryName) {
         return entries.get(entryName);
     }
-
+    /* 锁等待节点entryName == RedissonClient实例ID + lockKey ;      锁释放消息频道channelName = redisson_countdownlatch__channel__{lockKey}      */
     public RFuture<E> subscribe(final String entryName, final String channelName, final PublishSubscribeService subscribeService) {
         final AtomicReference<Runnable> listenerHolder = new AtomicReference<Runnable>();
-        final AsyncSemaphore semaphore = subscribeService.getSemaphore(channelName);
+        final AsyncSemaphore semaphore = subscribeService.getSemaphore(channelName);/* 订阅操作限流器 */
         final RPromise<E> newPromise = new RedissonPromise<E>() {
             @Override
             public boolean cancel(boolean mayInterruptIfRunning) {
@@ -79,15 +79,15 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
             @Override
             public void run() {
                 E entry = entries.get(entryName);
-                if (entry != null) {
-                    entry.aquire();
-                    semaphore.release();
+                if (entry != null) {/* 非第一个等待者 */
+                    entry.aquire();//等待线程加1
+                    semaphore.release();//限流令牌+1
                     entry.getPromise().addListener(new TransferListener<E>(newPromise));
                     return;
                 }
                 
-                E value = createEntry(newPromise);
-                value.aquire();
+                E value = createEntry(newPromise);/* 创建分布式锁等待节点 RedissonLockEntry ，每一个锁最多一个*/
+                value.aquire();//等待线程加1
                 
                 E oldValue = entries.putIfAbsent(entryName, value);
                 if (oldValue != null) {
@@ -96,12 +96,12 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
                     oldValue.getPromise().addListener(new TransferListener<E>(newPromise));
                     return;
                 }
-                
+                /* 创建监听器 --> 注册订阅解锁消息监听器 -->解锁时唤醒获取锁等待线程 */
                 RedisPubSubListener<Object> listener = createListener(channelName, value);
-                subscribeService.subscribe(LongCodec.INSTANCE, channelName, semaphore, listener);
+                subscribeService.subscribe(LongCodec.INSTANCE, channelName, semaphore, listener);//操作成功后 semaphore.release();
             }
         };
-        semaphore.acquire(listener);
+        semaphore.acquire(listener);/* 限流执行listener */
         listenerHolder.set(listener);
         
         return newPromise;
@@ -115,12 +115,12 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
         RedisPubSubListener<Object> listener = new BaseRedisPubSubListener() {
 
             @Override
-            public void onMessage(String channel, Object message) {
+            public void onMessage(String channel, Object message) { /* 订阅锁释放消息  */
                 if (!channelName.equals(channel)) {
                     return;
                 }
 
-                PublishSubscribe.this.onMessage(value, (Long)message);
+                PublishSubscribe.this.onMessage(value, (Long)message);/* 分布式锁释放消息 */
             }
 
             @Override

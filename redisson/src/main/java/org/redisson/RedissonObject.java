@@ -39,7 +39,7 @@ import io.netty.buffer.ByteBuf;
 public abstract class RedissonObject implements RObject {
 
     protected final CommandAsyncExecutor commandExecutor;
-    private final String name;
+    private final String name; /* 锁名字 lockKey */
     protected final Codec codec;
 
     public RedissonObject(Codec codec, CommandAsyncExecutor commandExecutor, String name) {
@@ -75,7 +75,7 @@ public abstract class RedissonObject implements RObject {
     }
 
     @Override
-    public String getName() {
+    public String getName() { /* 锁名字 */
         return name;
     }
     
@@ -164,7 +164,7 @@ public abstract class RedissonObject implements RObject {
     }
     
     @Override
-    public boolean isExists() {
+    public boolean isExists() {/* 锁是否存在 */
         return get(isExistsAsync());
     }
 

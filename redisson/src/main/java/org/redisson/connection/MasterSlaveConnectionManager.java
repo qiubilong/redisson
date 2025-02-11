@@ -111,7 +111,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
         }
     };
 
-    protected final UUID id;
+    protected final UUID id; /* 客户端实例id，用于区分多个RedissonClient实例 */
     
     public static final int MAX_SLOT = 16384;
 

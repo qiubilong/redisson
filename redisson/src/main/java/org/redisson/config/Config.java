@@ -84,7 +84,7 @@ public class Config {
 
     private EventLoopGroup eventLoopGroup;
 
-    private long lockWatchdogTimeout = 30 * 1000;
+    private long lockWatchdogTimeout = 30 * 1000; /* 每次锁延迟时间*/
     
     private boolean keepPubSubOrder = true;
     

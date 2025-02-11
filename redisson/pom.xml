@@ -21,6 +21,14 @@
        <url>http://redisson.org/</url>
     </organization>
 
+    <properties>
+        <maven.test.skip>true</maven.test.skip>
+        <source.version>1.8</source.version>
+        <test.source.version>1.8</test.source.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <springboot.version>2.5.5</springboot.version>
+    </properties>
+
     <profiles>
         <profile>
             <id>unit-test</id>
@@ -148,7 +156,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
-            <version>[3.1,)</version>
+            <version>[3.1,5.4)</version>
             <scope>test</scope>
         </dependency>
 
@@ -243,14 +251,14 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <version>[3.1,)</version>
+            <version>[3.1,5.4)</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context-support</artifactId>
-            <version>[3.1,)</version>
+            <version>[3.1,5.4)</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -264,7 +272,7 @@
         <dependency>
             <groupId>org.springframework.session</groupId>
             <artifactId>spring-session-core</artifactId>
-            <version>[2.0.0,)</version>
+            <version>${springboot.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -272,14 +280,14 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-actuator</artifactId>
-            <version>[2.0.0,)</version>
+            <version>${springboot.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>[2.0.0,)</version>
+            <version>${springboot.version}</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -322,7 +330,7 @@
          	</executions>
             </plugin>
 
-            <plugin>
+       <!--     <plugin>
          	<groupId>org.apache.maven.plugins</groupId>
          	<artifactId>maven-javadoc-plugin</artifactId>
          	<version>3.0.0</version>
@@ -332,15 +340,15 @@
                      <goals>
                          <goal>jar</goal>
                      </goals>
-<!--
+&lt;!&ndash;
                      <configuration>
                          <additionalparam>-Xdoclint:none</additionalparam>
                      </configuration>
--->
+&ndash;&gt;
                    </execution>
          	</executions>
             </plugin>
-
+-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>

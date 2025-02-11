@@ -19,12 +19,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
 import org.redisson.misc.RPromise;
-
+ /* 分布式锁等待节点 */
 public class RedissonLockEntry implements PubSubEntry<RedissonLockEntry> {
 
-    private int counter;
+    private int counter; /* 锁等待线程数 */
 
-    private final Semaphore latch;
+    private final Semaphore latch; /* 信号量，初始化0，用于阻塞线程获取锁。监听到解锁消息时+1，唤醒等待线程 */
     private final RPromise<RedissonLockEntry> promise;
     private final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>();
 
@@ -34,11 +34,11 @@ public class RedissonLockEntry implements PubSubEntry<RedissonLockEntry> {
         this.promise = promise;
     }
 
-    public void aquire() {
+    public void aquire() {//等待线程加1
         counter++;
     }
 
-    public int release() {
+    public int release() {//等待线程减1
         return --counter;
     }
 

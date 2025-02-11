@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
  * @author Nikita Koksharov
  *
  */
-public class AsyncSemaphore {
+public class AsyncSemaphore { /* 异步限流器 */
 
-    private int counter;
-    private final Set<Runnable> listeners = new LinkedHashSet<Runnable>();
+    private int counter; /* 限流令牌（可用资源），RLock实例化时执行counter=1，执行完一个任务后再加1，相当于排队串行执行 */
+    private final Set<Runnable> listeners = new LinkedHashSet<Runnable>();/* 限流的任务队列 */
 
     public AsyncSemaphore(int permits) {
         counter = permits;
@@ -74,22 +74,22 @@ public class AsyncSemaphore {
         }
     }
     
-    public void acquire(Runnable listener) {
+    public void acquire(Runnable listener) {/* 异步限流 */
         boolean run = false;
         
         synchronized (this) {
-            if (counter == 0) {
+            if (counter == 0) {/* 无许可证，任务排队 */
                 listeners.add(listener);
                 return;
             }
-            if (counter > 0) {
+            if (counter > 0) { /* 分布式锁初始化时，counter=1 */
                 counter--;
                 run = true;
             }
         }
         
         if (run) {
-            listener.run();
+            listener.run(); /* 有许可证，执行任务 */
         }
     }
     
@@ -103,7 +103,7 @@ public class AsyncSemaphore {
         return counter;
     }
     
-    public void release() {
+    public void release() { /* 发放一个限流许可证 */
         Runnable runnable = null;
         
         synchronized (this) {
@@ -116,7 +116,7 @@ public class AsyncSemaphore {
         }
         
         if (runnable != null) {
-            acquire(runnable);
+            acquire(runnable);/* 尝试执行下个任务 */
         }
     }
     

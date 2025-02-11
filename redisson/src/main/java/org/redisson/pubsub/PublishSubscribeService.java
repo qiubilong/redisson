@@ -58,20 +58,20 @@ public class PublishSubscribeService {
     
     private final MasterSlaveServersConfig config;
     
-    private final AsyncSemaphore[] locks = new AsyncSemaphore[50];
+    private final AsyncSemaphore[] locks = new AsyncSemaphore[50]; /* 订阅操作限流器 */
     
     private final AsyncSemaphore freePubSubLock = new AsyncSemaphore(1);
     
     protected final ConcurrentMap<String, PubSubConnectionEntry> name2PubSubConnection = PlatformDependent.newConcurrentHashMap();
     
-    protected final Queue<PubSubConnectionEntry> freePubSubConnections = new ConcurrentLinkedQueue<PubSubConnectionEntry>();
+    protected final Queue<PubSubConnectionEntry> freePubSubConnections = new ConcurrentLinkedQueue<PubSubConnectionEntry>();/*订阅连接*/
 
     public PublishSubscribeService(ConnectionManager connectionManager, MasterSlaveServersConfig config) {
         super();
         this.connectionManager = connectionManager;
         this.config = config;
         for (int i = 0; i < locks.length; i++) {
-            locks[i] = new AsyncSemaphore(1);
+            locks[i] = new AsyncSemaphore(1); /* 订阅操作限流器。令牌为1，相当于排队串行执行 */
         }
     }
 
@@ -152,7 +152,7 @@ public class PublishSubscribeService {
                 
                 final PubSubConnectionEntry freeEntry = freePubSubConnections.peek();
                 if (freeEntry == null) {
-                    connect(codec, channelName, promise, type, lock, listeners);
+                    connect(codec, channelName, promise, type, lock, listeners);/* 获取连接 */
                     return;
                 }
                 
@@ -175,7 +175,7 @@ public class PublishSubscribeService {
                 }
                 freePubSubLock.release();
                 
-                subscribe(channelName, promise, type, lock, freeEntry, listeners);
+                subscribe(channelName, promise, type, lock, freeEntry, listeners);/* 订阅channel */
                 
                 if (PubSubType.PSUBSCRIBE == type) {
                     freeEntry.psubscribe(codec, channelName);
@@ -209,7 +209,7 @@ public class PublishSubscribeService {
                         lock.release();
                     }
                 } else {
-                    lock.release();
+                    lock.release();/* 订阅channel成功，限流令牌加1 */
                 }
             }
         });
@@ -275,7 +275,7 @@ public class PublishSubscribeService {
                 freePubSubConnections.add(entry);
                 freePubSubLock.release();
                 
-                subscribe(channelName, promise, type, lock, entry, listeners);
+                subscribe(channelName, promise, type, lock, entry, listeners);//订阅
                 
                 if (PubSubType.PSUBSCRIBE == type) {
                     entry.psubscribe(codec, channelName);
