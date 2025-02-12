@@ -14,7 +14,7 @@
     <name>Redisson/Quarkus integration</name>
 
     <modules>
-        <module>redisson-quarkus-16</module>
+      <!--  <module>redisson-quarkus-16</module>-->
         <module>redisson-quarkus-20</module>
         <module>redisson-quarkus-30</module>
     </modules>

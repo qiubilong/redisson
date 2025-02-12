@@ -95,14 +95,14 @@ public abstract class RedissonBaseLock extends RedissonExpirable implements RLoc
     private static final ConcurrentMap<String, ExpirationEntry> EXPIRATION_RENEWAL_MAP = new ConcurrentHashMap<>();
     protected long internalLockLeaseTime;
 
-    final String id; //UUID.randomUUID().toString();
-    final String entryName;
+    final String id; //UUID - Redisson客户端ID
+    final String entryName;//锁节点
 
     public RedissonBaseLock(CommandAsyncExecutor commandExecutor, String name) {
         super(commandExecutor, name);
         this.id = getServiceManager().getId();
-        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();
-        this.entryName = id + ":" + name; /* UUID.randomUUID().toString(); + 锁名字key */
+        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();//30s
+        this.entryName = id + ":" + name; /* Redisson客户端ID  + 锁名字 */
     }
 
     protected String getEntryName() {
