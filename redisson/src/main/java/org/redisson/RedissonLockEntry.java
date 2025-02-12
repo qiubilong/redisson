@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore;
  *
  * @author Nikita Koksharov
  *
- */          /* 锁等待节点 */
+ */          /* 锁等待线程集合 */
 public class RedissonLockEntry implements PubSubEntry<RedissonLockEntry> {
 
     private volatile int counter; /* 等待线程数 */

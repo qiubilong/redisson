@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 abstract class PublishSubscribe<E extends PubSubEntry<E>> {
 
-    private final ConcurrentMap<String, E> entries = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, E> entries = new ConcurrentHashMap<>(); /* 解锁消息channel <--> 等待解锁节点  */
     private final PublishSubscribeService service;
 
     PublishSubscribe(PublishSubscribeService service) {
