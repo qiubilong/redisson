@@ -28,27 +28,18 @@ public class TestMe {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                doMain();
+                doMain(5);
             }
         }).start();
 
-        Thread.sleep(10* 1000);//等待获取锁成功
-
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                doMain();
-            }
-        }).start();
-        Thread.sleep(300* 1000);
+        Thread.sleep( 1000);//等待获取锁成功
 
 
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                doMain();
+                doMain(3000);
             }
         }).start();
         Thread.sleep(10* 1000);
@@ -58,14 +49,14 @@ public class TestMe {
 
     }
 
-    public static void  doMain(){
+    public static void  doMain(int taskSec){
         String key = "testLockTime";
         RLock lock = redissonClient.getLock(key);
 
         lock.lock();
         try {
             log.info("获得锁");
-            Thread.sleep(300* 1000);
+            Thread.sleep(taskSec* 1000L);
         }catch (Exception e){
             e.printStackTrace();
         }finally {

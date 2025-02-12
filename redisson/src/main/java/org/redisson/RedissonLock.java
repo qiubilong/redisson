@@ -206,10 +206,10 @@ public class RedissonLock extends RedissonExpirable implements RLock {
                 
                 RFuture<Boolean> future = commandExecutor.evalWriteAsync(getName(), LongCodec.INSTANCE, RedisCommands.EVAL_BOOLEAN,
                         "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
-                            "redis.call('pexpire', KEYS[1], ARGV[1]); " + /* 延迟锁时间 */
+                            "redis.call('pexpire', KEYS[1], ARGV[1]); " + /* 重新设置锁过期时间为30s */
                             "return 1; " +
                         "end; " +
-                        "return 0;",  //keys列表                     // 参数列表
+                        "return 0;",  //keys列表                     // 参数值列表
                           Collections.<Object>singletonList(getName()), internalLockLeaseTime, getLockName(threadId));
                 
                 future.addListener(new FutureListener<Boolean>() {
@@ -230,7 +230,7 @@ public class RedissonLock extends RedissonExpirable implements RLock {
             }
         }, internalLockLeaseTime / 3, TimeUnit.MILLISECONDS);/* 默认每10s执行一次延迟锁的过期时间 */
 
-        if (expirationRenewalMap.putIfAbsent(getEntryName(), task) != null) {
+        if (expirationRenewalMap.putIfAbsent(getEntryName(), task) != null) {//保证一个锁一个看门狗任务
             task.cancel();
         }
     }
@@ -351,7 +351,7 @@ public class RedissonLock extends RedissonExpirable implements RLock {
         return PUBSUB.subscribe(getEntryName(), getChannelName(), commandExecutor.getConnectionManager().getSubscribeService());
     }
 
-    protected void unsubscribe(RFuture<RedissonLockEntry> future, long threadId) {    /* 取消解锁消息订阅 */
+    protected void unsubscribe(RFuture<RedissonLockEntry> future, long threadId) {    /* 取消订阅解锁消息 */
         PUBSUB.unsubscribe(future.getNow(), getEntryName(), getChannelName(), commandExecutor.getConnectionManager().getSubscribeService());
     }
 
@@ -368,7 +368,14 @@ public class RedissonLock extends RedissonExpirable implements RLock {
                     + id + " thread-id: " + Thread.currentThread().getId());
         }
         if (opStatus) {
-            cancelExpirationRenewal();/* 解锁成功，取消看门狗延长锁逻辑*/
+            try {
+                System.out.println("模拟卡顿开始");
+                Thread.sleep(30);//模拟卡顿
+                System.out.println("模拟卡顿结束");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            cancelExpirationRenewal();/* 解锁成功，取消看门狗延长锁时间逻辑*/
         }
 
 //        Future<Void> future = unlockAsync();
