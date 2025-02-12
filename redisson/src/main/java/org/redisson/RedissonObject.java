@@ -46,7 +46,7 @@ import java.util.stream.StreamSupport;
 public abstract class RedissonObject implements RObject {
 
     protected final CommandAsyncExecutor commandExecutor;
-    protected String name;
+    protected String name; /* 锁名字 */
     protected final Codec codec;
 
     public RedissonObject(Codec codec, CommandAsyncExecutor commandExecutor, String name) {
@@ -237,7 +237,7 @@ public abstract class RedissonObject implements RObject {
     }
     
     @Override
-    public boolean isExists() {
+    public boolean isExists() {/* 锁是否存在 */
         return get(isExistsAsync());
     }
 

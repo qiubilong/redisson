@@ -24,10 +24,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author Nikita Koksharov
  *
  */
-public class AsyncSemaphore {
+public class AsyncSemaphore { /* 异步限流器 */
 
-    private final AtomicInteger counter;
-    private final Queue<CompletableFuture<Void>> listeners = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger counter; /* 限流令牌。当RedissonLock初始化counter=1，任务执行完后再发一个令牌驱动执行下一个任务，相当于串行执行任务 */
+    private final Queue<CompletableFuture<Void>> listeners = new ConcurrentLinkedQueue<>();//任务队列
 
     public AsyncSemaphore(int permits) {
         counter = new AtomicInteger(permits);

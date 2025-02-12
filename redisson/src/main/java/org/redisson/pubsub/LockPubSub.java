@@ -43,10 +43,10 @@ public class LockPubSub extends PublishSubscribe<RedissonLockEntry> {
         if (message.equals(UNLOCK_MESSAGE)) { /* 解锁消息 */
             Runnable runnableToExecute = value.getListeners().poll();
             if (runnableToExecute != null) {
-                runnableToExecute.run();//解锁消息监听
+                runnableToExecute.run();
             }
 
-            value.getLatch().release();
+            value.getLatch().release();/* 唤醒阻塞等待获取分布式锁线程，重新竞争获取锁 */
         } else if (message.equals(READ_UNLOCK_MESSAGE)) {
             while (true) {
                 Runnable runnableToExecute = value.getListeners().poll();

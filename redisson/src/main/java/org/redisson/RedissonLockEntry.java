@@ -23,12 +23,12 @@ import java.util.concurrent.Semaphore;
  *
  * @author Nikita Koksharov
  *
- */
+ */          /* 锁等待节点 */
 public class RedissonLockEntry implements PubSubEntry<RedissonLockEntry> {
 
-    private volatile int counter;
+    private volatile int counter; /* 等待线程数 */
 
-    private final Semaphore latch;
+    private final Semaphore latch; /* 信号量，用于控制阻塞线程等待获取分布式锁。当channel订阅器监听到解锁消息时，唤醒线程 */
     private final CompletableFuture<RedissonLockEntry> promise;
     private final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>();
 
@@ -42,11 +42,11 @@ public class RedissonLockEntry implements PubSubEntry<RedissonLockEntry> {
         return counter;
     }
 
-    public void acquire() {
+    public void acquire() {//等待线程数加1
         counter++;
     }
 
-    public int release() {
+    public int release() {//等待线程数减1
         return --counter;
     }
 

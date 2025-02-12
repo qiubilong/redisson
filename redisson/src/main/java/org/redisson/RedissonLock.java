@@ -53,25 +53,25 @@ public class RedissonLock extends RedissonBaseLock {
     public RedissonLock(CommandAsyncExecutor commandExecutor, String name) {
         super(commandExecutor, name);
         this.commandExecutor = commandExecutor;
-        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认  30 * 1000; */
-        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 锁释放，订阅监听器 */
+        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认加锁时间 30 * 1000; */
+        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 加锁消息订阅监听器 */
     }
 
     String getChannelName() {
-        return prefixName("redisson_lock__channel", getRawName());/* 锁释放频道 */
+        return prefixName("redisson_lock__channel", getRawName());/* 解锁消息channel */
     }
 
     @Override
-    public void lock() {
+    public void lock() { /* 排队获取分布式锁 --> 加锁成功 -->开启看门狗自动续约锁过期时间 */
         try {
-            lock(-1, null, false);/* -1表示永久持久*/
+            lock(-1, null, false);// leaseTime=-1表示没有指定锁过期时间，会开启看门狗自动续约锁过期时间
         } catch (InterruptedException e) {
             throw new IllegalStateException();
         }
     }
 
     @Override
-    public void lock(long leaseTime, TimeUnit unit) {
+    public void lock(long leaseTime, TimeUnit unit) {//leaseTime==-1时，才开启看门狗自动续约锁过期时间逻
         try {
             lock(leaseTime, unit, false);
         } catch (InterruptedException e) {
@@ -89,36 +89,36 @@ public class RedissonLock extends RedissonBaseLock {
     public void lockInterruptibly(long leaseTime, TimeUnit unit) throws InterruptedException {
         lock(leaseTime, unit, true);
     }
-    /* leaseTime=-1 表示永久占有锁，直到手动释放 */
+    /* 锁时间leaseTime（-1=表示没有指定锁过期时间，会开启看门狗自动续约锁过期时间） */
     private void lock(long leaseTime, TimeUnit unit, boolean interruptibly) throws InterruptedException {
         long threadId = Thread.currentThread().getId();
-        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 尝试获取分布式锁 */
+        Long ttl = tryAcquire(-1, leaseTime, unit, threadId);/* << 尝试获取分布式锁 */
         // lock acquired
-        if (ttl == null) {/* 返回空，表示获取分布式锁成功 */
+        if (ttl == null) {/* 锁剩余时间返，null表示获取分布式锁成功 */
             return;
         }
-        /* 获取锁失败时，订阅锁释放消息 */
+        /* 获取锁失败时，注册订阅解锁消息channel监听器（一个锁只注册一次） */
         CompletableFuture<RedissonLockEntry> future = subscribe(threadId);
         pubSub.timeout(future);
         RedissonLockEntry entry;
         if (interruptibly) {
             entry = commandExecutor.getInterrupted(future);
         } else {
-            entry = commandExecutor.get(future);
+            entry = commandExecutor.get(future);//默认
         }
 
-        try {
+        try { /* 自旋间歇式尝试获取锁，直到成功 */
             while (true) {
-                ttl = tryAcquire(-1, leaseTime, unit, threadId);/* 尝试获取分布式锁 */
+                ttl = tryAcquire(-1, leaseTime, unit, threadId);/* << 尝试获取分布式锁 */
                 // lock acquired
                 if (ttl == null) {//获锁成功
                     break;
                 }
-
+                /* 获取分布式锁失败时，线程挂起等待ttl时间，可减少锁竞争开销。使用redis channel监听解锁消息，解锁时唤醒线程 */
                 // waiting for message
-                if (ttl >= 0) { /* 获取分布式锁失败时，限时ttl锁过期时间 挂起等待 */
+                if (ttl >= 0) {
                     try {
-                        entry.getLatch().tryAcquire(ttl, TimeUnit.MILLISECONDS);
+                        entry.getLatch().tryAcquire(ttl, TimeUnit.MILLISECONDS);//阻塞等待
                     } catch (InterruptedException e) {
                         if (interruptibly) {
                             throw e;
@@ -134,7 +134,7 @@ public class RedissonLock extends RedissonBaseLock {
                 }
             }
         } finally {
-            unsubscribe(entry, threadId);/* 获取锁成功，取消订阅 */
+            unsubscribe(entry, threadId);/* 获取锁成功后，等待锁线程减1，为0时取消订阅解锁channel */
         }
 //        get(lockAsync(leaseTime, unit));
     }
@@ -151,7 +151,7 @@ public class RedissonLock extends RedissonBaseLock {
         CompletionStage<Boolean> acquiredFuture;
         if (leaseTime > 0) {
             acquiredFuture = tryLockInnerAsync(waitTime, leaseTime, unit, threadId, RedisCommands.EVAL_NULL_BOOLEAN);
-        } else {
+        } else {  /* 默认leaseTime=-1，未指定锁过期时间 -->加锁成功后开启看门狗，自动续约锁时间  */
             acquiredFuture = tryLockInnerAsync(waitTime, internalLockLeaseTime,
                     TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_NULL_BOOLEAN);
         }
@@ -174,9 +174,9 @@ public class RedissonLock extends RedissonBaseLock {
 
     private RFuture<Long> tryAcquireAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId) {
         RFuture<Long> ttlRemainingFuture;
-        if (leaseTime > 0) {
+        if (leaseTime > 0) { // 手动指定锁过期时间，不会开启看门狗
             ttlRemainingFuture = tryLockInnerAsync(waitTime, leaseTime, unit, threadId, RedisCommands.EVAL_LONG);
-        } else {
+        } else {                /* 默认leaseTime=-1，未指定锁过期时间，开启看门狗自动续约锁过期时间 */
             ttlRemainingFuture = tryLockInnerAsync(waitTime, internalLockLeaseTime,
                     TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_LONG);
         }
@@ -188,7 +188,7 @@ public class RedissonLock extends RedissonBaseLock {
             if (ttlRemaining == null) {
                 if (leaseTime > 0) {
                     internalLockLeaseTime = unit.toMillis(leaseTime);
-                } else {
+                } else { /*  leaseTime=-1，未指定锁过期时间，开启看门狗每间隔10s续约锁过期时间 */
                     scheduleExpirationRenewal(threadId);
                 }
             }
@@ -198,7 +198,7 @@ public class RedissonLock extends RedissonBaseLock {
     }
 
     @Override
-    public boolean tryLock() {
+    public boolean tryLock() {/* 尝试获取分布式锁 --> 获取成功 --> 开启看门狗自动续约锁过期时间 */
         return get(tryLockAsync());
     }
 
@@ -219,12 +219,12 @@ public class RedissonLock extends RedissonBaseLock {
         long time = unit.toMillis(waitTime);
         long current = System.currentTimeMillis();
         long threadId = Thread.currentThread().getId();
-        Long ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+        Long ttl = tryAcquire(waitTime, leaseTime, unit, threadId); /* <<< 尝试获取分布式锁 */
         // lock acquired
-        if (ttl == null) {
+        if (ttl == null) { /* 获取锁成 */
             return true;
         }
-        
+        /* 加锁超时 */
         time -= System.currentTimeMillis() - current;
         if (time <= 0) {
             acquireFailed(waitTime, unit, threadId);
@@ -232,7 +232,7 @@ public class RedissonLock extends RedissonBaseLock {
         }
         
         current = System.currentTimeMillis();
-        CompletableFuture<RedissonLockEntry> subscribeFuture = subscribe(threadId);
+        CompletableFuture<RedissonLockEntry> subscribeFuture = subscribe(threadId);/* 注册监听解锁消息channel监听器 */
         try {
             subscribeFuture.get(time, TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
@@ -258,10 +258,10 @@ public class RedissonLock extends RedissonBaseLock {
                 acquireFailed(waitTime, unit, threadId);
                 return false;
             }
-        
+            /* 自旋间歇尝试获取分布式锁，直到获取成功或者超时 */
             while (true) {
                 long currentTime = System.currentTimeMillis();
-                ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+                ttl = tryAcquire(waitTime, leaseTime, unit, threadId);/* <<< 尝试获取分布式锁 */
                 // lock acquired
                 if (ttl == null) {
                     return true;
@@ -272,7 +272,7 @@ public class RedissonLock extends RedissonBaseLock {
                     acquireFailed(waitTime, unit, threadId);
                     return false;
                 }
-
+                /* 阻塞等待，直到超时或者解锁唤醒 */
                 // waiting for message
                 currentTime = System.currentTimeMillis();
                 if (ttl >= 0 && ttl < time) {
@@ -293,15 +293,15 @@ public class RedissonLock extends RedissonBaseLock {
 //        return get(tryLockAsync(waitTime, leaseTime, unit));
     }
 
-    protected CompletableFuture<RedissonLockEntry> subscribe(long threadId) {
+    protected CompletableFuture<RedissonLockEntry> subscribe(long threadId) { /* 订阅解锁消息channel */
         return pubSub.subscribe(getEntryName(), getChannelName());
     }
 
-    protected void unsubscribe(RedissonLockEntry entry, long threadId) {
+    protected void unsubscribe(RedissonLockEntry entry, long threadId) { /* 取消订阅解锁消息channel */
         pubSub.unsubscribe(entry, getEntryName(), getChannelName());
     }
 
-    @Override
+    @Override     /* 尝试在waitTime时间内获取分布式锁 -->加锁成功，开启看门狗自动续约锁过期时间  */
     public boolean tryLock(long waitTime, TimeUnit unit) throws InterruptedException {
         return tryLock(waitTime, -1, unit);
     }
@@ -327,23 +327,23 @@ public class RedissonLock extends RedissonBaseLock {
 
 
 
-    protected RFuture<Boolean> unlockInnerAsync(long threadId) {
+    protected RFuture<Boolean> unlockInnerAsync(long threadId) { /* 解锁 */
         return evalWriteAsync(getRawName(), LongCodec.INSTANCE, RedisCommands.EVAL_BOOLEAN,
-              "if (redis.call('hexists', KEYS[1], ARGV[3]) == 0) then " +
+              "if (redis.call('hexists', KEYS[1], ARGV[3]) == 0) then " + /* 1、未拥有锁 */
                         "return nil;" +
                     "end; " +
                     "local counter = redis.call('hincrby', KEYS[1], ARGV[3], -1); " +
                     "if (counter > 0) then " +
-                        "redis.call('pexpire', KEYS[1], ARGV[2]); " +
+                        "redis.call('pexpire', KEYS[1], ARGV[2]); " +   /* 2.1、拥有锁，锁重入 */
                         "return 0; " +
                     "else " +
-                        "redis.call('del', KEYS[1]); " +
+                        "redis.call('del', KEYS[1]); " +                /* 2.2、拥有锁，解锁，发布解锁消息 */
                         "redis.call(ARGV[4], KEYS[2], ARGV[1]); " +
                         "return 1; " +
                     "end; " +
                     "return nil;",
-                Arrays.asList(getRawName(), getChannelName()),
-                LockPubSub.UNLOCK_MESSAGE, internalLockLeaseTime, getLockName(threadId), getSubscribeService().getPublishCommand());
+                Arrays.asList(getRawName(), getChannelName()), //keys列表：锁名字，解锁消息channel
+                LockPubSub.UNLOCK_MESSAGE, internalLockLeaseTime, getLockName(threadId), getSubscribeService().getPublishCommand());//参数列表：解锁消息,锁过期时间30s,线程唯一值,命令PUBLISH
     }
 
     @Override

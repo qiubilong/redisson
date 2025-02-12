@@ -45,9 +45,9 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
         ChannelName cn = new ChannelName(channelName);
         AsyncSemaphore semaphore = service.getSemaphore(cn);
         semaphore.acquire().thenAccept(c -> {
-            if (entry.release() == 0) {
-                entries.remove(entryName);
-                service.unsubscribeLocked(cn)/* 取消订阅锁释放消息 */
+            if (entry.release() == 0) {/* 线程数减1 */
+                entries.remove(entryName);/* 线程数为0时，取消订阅解锁消息channel */
+                service.unsubscribeLocked(cn)
                         .whenComplete((r, e) -> {
                             semaphore.release();
                         });
@@ -64,21 +64,21 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
     public void timeout(CompletableFuture<?> promise, long timeout) {
         service.timeout(promise, timeout);
     }
-
-    public CompletableFuture<E> subscribe(String entryName, String channelName) {
-        AsyncSemaphore semaphore = service.getSemaphore(new ChannelName(channelName));
+    /*  entryName = 锁节点名字 = RedissonClientId + 锁名字  */
+    public CompletableFuture<E> subscribe(String entryName, String channelName) {/* 订阅解锁消息channel */
+        AsyncSemaphore semaphore = service.getSemaphore(new ChannelName(channelName));//限流器，维护任务串行执行
         CompletableFuture<E> newPromise = new CompletableFuture<>();
 
         semaphore.acquire().thenAccept(c -> {
             if (newPromise.isDone()) {
-                semaphore.release();
+                semaphore.release();//执行完毕，发放令牌，驱动执行下个任务
                 return;
             }
 
             E entry = entries.get(entryName);
-            if (entry != null) {
-                entry.acquire();
-                semaphore.release();
+            if (entry != null) {//非首个订阅解锁消息线程，不需要再次订阅解锁channel消息
+                entry.acquire();//等待线程加1
+                semaphore.release();//发放令牌
                 entry.getPromise().whenComplete((r, e) -> {
                     if (e != null) {
                         newPromise.completeExceptionally(e);
@@ -89,8 +89,8 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
                 return;
             }
 
-            E value = createEntry(newPromise);
-            value.acquire();
+            E value = createEntry(newPromise);/* 首个订阅解锁消息线程，创建锁等待节点对象 */
+            value.acquire();//等待线程加1
 
             E oldValue = entries.putIfAbsent(entryName, value);
             if (oldValue != null) {
@@ -105,7 +105,7 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
                 });
                 return;
             }
-
+            /* 首个订阅线程 --> 创建解锁消息监听器 --> 利用redis channel机制订阅监听解锁消息 --> 唤醒阻塞等待线程 --> 重新竞争分布式锁  */
             RedisPubSubListener<Object> listener = createListener(channelName, value);
             CompletableFuture<PubSubConnectionEntry> s = service.subscribeNoTimeout(LongCodec.INSTANCE, channelName, semaphore, listener);
             newPromise.whenComplete((r, e) -> {
@@ -140,7 +140,7 @@ abstract class PublishSubscribe<E extends PubSubEntry<E>> {
                     return;
                 }
 
-                PublishSubscribe.this.onMessage(value, (Long) message);
+                PublishSubscribe.this.onMessage(value, (Long) message);/* 收到订阅消息 */
             }
         };
         return listener;

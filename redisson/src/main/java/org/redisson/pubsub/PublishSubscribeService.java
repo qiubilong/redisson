@@ -111,7 +111,7 @@ public class PublishSubscribeService {
 
     private final CountDownLatchPubSub countDownLatchPubSub = new CountDownLatchPubSub(this);
 
-    private final LockPubSub lockPubSub = new LockPubSub(this);
+    private final LockPubSub lockPubSub = new LockPubSub(this); /* 解锁消息订阅器 */
 
     private boolean shardingSupported = false;
 
@@ -122,7 +122,7 @@ public class PublishSubscribeService {
         this.connectionManager = connectionManager;
         this.config = connectionManager.getServiceManager().getConfig();
         for (int i = 0; i < locks.length; i++) {
-            locks[i] = new AsyncSemaphore(1);
+            locks[i] = new AsyncSemaphore(1);/* 初始化限流器*/
         }
 
         subscribe2unsubscribe.put(PubSubType.SUBSCRIBE, PubSubType.UNSUBSCRIBE);
