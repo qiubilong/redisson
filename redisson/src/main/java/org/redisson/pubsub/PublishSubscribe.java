@@ -39,21 +39,21 @@ import io.netty.util.internal.PlatformDependent;
 abstract class PublishSubscribe<E extends PubSubEntry<E>> {
 
     private final ConcurrentMap<String, E> entries = PlatformDependent.newConcurrentHashMap();
-    /* 取消解锁消息订阅 */
+    /* 取消订阅解锁消息 */
     public void unsubscribe(final E entry, final String entryName, final String channelName, final PublishSubscribeService subscribeService) {
         final AsyncSemaphore semaphore = subscribeService.getSemaphore(channelName);
         semaphore.acquire(new Runnable() {
             @Override
             public void run() {
-                if (entry.release() == 0) {/* 锁订阅等待数减1 */
+                if (entry.release() == 0) {/* 锁等待线程数减1 */
                     // just an assertion
                     boolean removed = entries.remove(entryName) == entry;
                     if (!removed) {
                         throw new IllegalStateException();
                     }
-                    subscribeService.unsubscribe(channelName, semaphore);  /* 没有锁等待者后，取消订阅 */
+                    subscribeService.unsubscribe(channelName, semaphore);  /* 没有锁等待者后，取消channel订阅 */
                 } else {
-                    semaphore.release(); /* 执行异步限流中的下一个任务 */
+                    semaphore.release(); /* 限流令牌 */
                 }
             }
         });
