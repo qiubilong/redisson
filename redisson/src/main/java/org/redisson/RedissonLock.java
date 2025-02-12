@@ -54,7 +54,7 @@ public class RedissonLock extends RedissonBaseLock {
         super(commandExecutor, name);
         this.commandExecutor = commandExecutor;
         this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认加锁时间 30 * 1000; */
-        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 加锁消息订阅监听器 */
+        this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 解锁消息channel订阅监听器 */
     }
 
     String getChannelName() {
