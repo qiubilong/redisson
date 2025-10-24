@@ -66,7 +66,7 @@ public class Redisson implements RedissonClient {
         this.config = config;
         Config configCopy = new Config(config);
 
-        connectionManager = ConfigSupport.createConnectionManager(configCopy);//连接池
+        connectionManager = ConfigSupport.createConnectionManager(configCopy);/*  启动netty Client & 初始化连接池  */
         RedissonObjectBuilder objectBuilder = null;
         if (config.isReferenceEnabled()) {
             objectBuilder = new RedissonObjectBuilder(this);
@@ -111,7 +111,7 @@ public class Redisson implements RedissonClient {
      * @return Redisson instance
      */
     public static RedissonClient create(Config config) {
-        return new Redisson(config);
+        return new Redisson(config);/*  启动netty Client & 初始化连接池  */
     }
 
     /**
@@ -383,7 +383,7 @@ public class Redisson implements RedissonClient {
     }
     
     @Override
-    public RLock getRedLock(RLock... locks) {
+    public RLock getRedLock(RLock... locks) {/* 红锁 - 多台机 */
         return new RedissonRedLock(locks);
     }
 
@@ -393,7 +393,7 @@ public class Redisson implements RedissonClient {
     }
 
     @Override
-    public RReadWriteLock getReadWriteLock(String name) {
+    public RReadWriteLock getReadWriteLock(String name) { /* 读写锁 */
         return new RedissonReadWriteLock(commandExecutor, name);
     }
 

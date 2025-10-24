@@ -61,7 +61,7 @@ public class MasterSlaveEntry {
     final MasterSlaveServersConfig config;
     final ConnectionManager connectionManager;
 
-    final MasterConnectionPool writeConnectionPool;
+    final MasterConnectionPool writeConnectionPool; /* redis 连接池 */
     
     final MasterPubSubConnectionPool pubSubConnectionPool;
 
@@ -117,12 +117,12 @@ public class MasterSlaveEntry {
     }
 
     public CompletableFuture<RedisClient> setupMasterEntry(RedisURI address) {
-        return setupMasterEntry(address, null);
+        return setupMasterEntry(address, null);/*  启动netty Client & 初始化连接池  */
     }
 
     public CompletableFuture<RedisClient> setupMasterEntry(RedisURI address, String sslHostname) {
-        RedisClient client = connectionManager.createClient(NodeType.MASTER, address, sslHostname);
-        return setupMasterEntry(client);
+        RedisClient client = connectionManager.createClient(NodeType.MASTER, address, sslHostname);/* 启动netty Client */
+        return setupMasterEntry(client); /* 初始化连接池 */
     }
 
     private CompletableFuture<RedisClient> setupMasterEntry(RedisClient client) {
@@ -147,7 +147,7 @@ public class MasterSlaveEntry {
                 return CompletableFuture.completedFuture(null);
             }
 
-            CompletableFuture<Void> writeFuture = writeConnectionPool.initConnections(masterEntry);
+            CompletableFuture<Void> writeFuture = writeConnectionPool.initConnections(masterEntry); /* 连接redis */
             futures.add(writeFuture);
 
             if (config.getSubscriptionMode() == SubscriptionMode.MASTER) {

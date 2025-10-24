@@ -53,7 +53,7 @@ public class RedissonLock extends RedissonBaseLock {
     public RedissonLock(CommandAsyncExecutor commandExecutor, String name) {
         super(commandExecutor, name);
         this.commandExecutor = commandExecutor;
-        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认加锁时间 30 * 1000; */
+        this.internalLockLeaseTime = getServiceManager().getCfg().getLockWatchdogTimeout();/* 默认加锁时间  30s */
         this.pubSub = commandExecutor.getConnectionManager().getSubscribeService().getLockPubSub(); /* 解锁消息channel订阅监听器 */
     }
 
@@ -71,7 +71,7 @@ public class RedissonLock extends RedissonBaseLock {
     }
 
     @Override
-    public void lock(long leaseTime, TimeUnit unit) {//leaseTime==-1时，才开启看门狗自动续约锁过期时间逻
+    public void lock(long leaseTime, TimeUnit unit) {/* leaseTime==-1时，才开启看门狗自动续约锁过期时间逻 */
         try {
             lock(leaseTime, unit, false);
         } catch (InterruptedException e) {
@@ -205,13 +205,13 @@ public class RedissonLock extends RedissonBaseLock {
     <T> RFuture<T> tryLockInnerAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
         return commandExecutor.syncedEval(getRawName(), LongCodec.INSTANCE, command,
                 "if ((redis.call('exists', KEYS[1]) == 0) " +
-                            "or (redis.call('hexists', KEYS[1], ARGV[2]) == 1)) then " +
+                            "or (redis.call('hexists', KEYS[1], ARGV[2]) == 1)) then " + /* 支持重入锁 */
                         "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +
                         "redis.call('pexpire', KEYS[1], ARGV[1]); " +
                         "return nil; " +
                     "end; " +
                     "return redis.call('pttl', KEYS[1]);",
-                Collections.singletonList(getRawName()), unit.toMillis(leaseTime), getLockName(threadId));
+                Collections.singletonList(getRawName()), unit.toMillis(leaseTime), getLockName(threadId)); /* 锁key 、过期时间、分布式线程id */
     }
 
     @Override

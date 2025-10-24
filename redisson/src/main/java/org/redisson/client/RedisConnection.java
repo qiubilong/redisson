@@ -215,7 +215,7 @@ public class RedisConnection implements RedisCommands {
     }
 
     public <T, R> ChannelFuture send(CommandData<T, R> data) {
-        return channel.writeAndFlush(data);
+        return channel.writeAndFlush(data);/* 发送redis请求 */
     }
 
     public ChannelFuture send(CommandsData data) {

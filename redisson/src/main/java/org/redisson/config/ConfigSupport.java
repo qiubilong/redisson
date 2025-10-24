@@ -191,7 +191,7 @@ public class ConfigSupport {
     }
 
     public static ConnectionManager createConnectionManager(Config configCopy) {
-        ServiceManager serviceManager = new ServiceManager(configCopy);
+        ServiceManager serviceManager = new ServiceManager(configCopy); /*  初始化 netty work线程池 */
 
         ConnectionManager cm = null;
         if (configCopy.getMasterSlaveServersConfig() != null) {
@@ -218,7 +218,7 @@ public class ConfigSupport {
         }
         if (!configCopy.isLazyInitialization()) {
             try {
-                cm.connect();
+                cm.connect(); /*  启动netty Client & 初始化连接池  */
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

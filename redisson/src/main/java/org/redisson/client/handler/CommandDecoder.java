@@ -76,7 +76,7 @@ public class CommandDecoder extends ReplayingDecoder<State> {
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        QueueCommandHolder holder = getCommand(ctx);
+        QueueCommandHolder holder = getCommand(ctx); /* 找到第一个请求 */
         QueueCommand data = null;
         if (holder != null) {
             data = holder.getCommand();
@@ -117,7 +117,7 @@ public class CommandDecoder extends ReplayingDecoder<State> {
                 return;
             }
 
-            decode(ctx, in, data, endIndex);
+            decode(ctx, in, data, endIndex);/* 请求响应 */
         }
     }
 
@@ -202,8 +202,8 @@ public class CommandDecoder extends ReplayingDecoder<State> {
         if (data instanceof CommandData) {
             CommandData<Object, Object> cmd = (CommandData<Object, Object>) data;
             try {
-                decode(in, cmd, null, channel, false, null);
-                sendNext(channel, data);
+                decode(in, cmd, null, channel, false, null); /* 请求响应 */
+                sendNext(channel, data);/* 请求队列- 移除改请求 */
             } catch (Exception e) {
                 log.error("Unable to decode data. channel: {}, reply: {}, command: {}", channel, LogHelper.toString(in), LogHelper.toString(data), e);
                 in.readerIndex(endIndex);
@@ -332,13 +332,13 @@ public class CommandDecoder extends ReplayingDecoder<State> {
             state().setBatchIndex(i);
         }
     }
-
+    /* 请求响应 */
     protected void decode(ByteBuf in, CommandData<Object, Object> data, List<Object> parts, Channel channel, boolean skipConvertor, List<CommandData<?, ?>> commandsData) throws IOException {
         int code = in.readByte();
         if (code == '+') {
             String result = readString(in);
 
-            handleResult(data, parts, result, skipConvertor);
+            handleResult(data, parts, result, skipConvertor); /* 请求响应 */
         } else if (code == '-') {
             String error = readString(in);
 
@@ -458,7 +458,7 @@ public class CommandDecoder extends ReplayingDecoder<State> {
             handleResult(data, parts, result, true);
         }
     }
-
+    /* 请求响应 */
     private void handleResult(CommandData<Object, Object> data, List<Object> parts, Object result, boolean skipConvertor) {
         if (data != null && !skipConvertor) {
             result = data.getCommand().getConvertor().convert(result);
@@ -466,7 +466,7 @@ public class CommandDecoder extends ReplayingDecoder<State> {
         if (parts != null) {
             parts.add(result);
         } else {
-            completeResponse(data, result);
+            completeResponse(data, result); /* 请求响应 */
         }
     }
 

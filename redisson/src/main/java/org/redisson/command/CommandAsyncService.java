@@ -459,7 +459,7 @@ public class CommandAsyncService implements CommandAsyncExecutor {
             RedisExecutor<T, R> executor = new RedisExecutor<>(readOnlyMode, nodeSource, codec, cmd,
                                                         args.toArray(), promise, false,
                                                         connectionManager, objectBuilder, referenceType, noRetry);
-            executor.execute();
+            executor.execute(); /* 执行 redis 请求 */
 
             promise.whenComplete((res, e) -> {
                 if (e != null) {

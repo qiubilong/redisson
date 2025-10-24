@@ -138,12 +138,12 @@ public class ServiceManager {
 
         if (cfg.getTransportMode() == TransportMode.EPOLL) {
             if (cfg.getEventLoopGroup() == null) {
-                this.group = new EpollEventLoopGroup(cfg.getNettyThreads(), new DefaultThreadFactory("redisson-netty"));
+                this.group = new EpollEventLoopGroup(cfg.getNettyThreads(), new DefaultThreadFactory("redisson-netty"));/* netty io线程池*/
             } else {
                 this.group = cfg.getEventLoopGroup();
             }
 
-            this.socketChannelClass = EpollSocketChannel.class;
+            this.socketChannelClass = EpollSocketChannel.class; /* NIO Socket */
             if (PlatformDependent.isAndroid()) {
                 this.resolverGroup = DefaultAddressResolverGroup.INSTANCE;
             } else {
@@ -186,7 +186,7 @@ public class ServiceManager {
             int threads = Runtime.getRuntime().availableProcessors() * 2;
             if (cfg.getThreads() != 0) {
                 threads = cfg.getThreads();
-            }
+            } /* 命令线程池 */
             executor = Executors.newFixedThreadPool(threads, new DefaultThreadFactory("redisson"));
         } else {
             executor = cfg.getExecutor();

@@ -185,12 +185,12 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
     @Override
     public final void connect() throws InterruptedException {
         int attempts = config.getRetryAttempts() + 1;
-        for (int i = 0; i < attempts; i++) {
+        for (int i = 0; i < attempts; i++) {//默认重试3次
             try {
                 if (i == attempts - 1) {
                     lastAttempt = true;
                 }
-                doConnect();
+                doConnect();/*  启动netty Client & 初始化连接池  */
                 return;
             } catch (Exception e) {
                 if (i == attempts - 1) {
@@ -198,7 +198,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
                     throw e;
                 }
                 try {
-                    Thread.sleep(config.getRetryInterval());
+                    Thread.sleep(config.getRetryInterval());//1.5s
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                     return;
@@ -214,7 +214,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
             } else {
                 masterSlaveEntry = new MasterSlaveEntry(this, serviceManager.getConnectionWatcher(), config);
             }
-            CompletableFuture<RedisClient> masterFuture = masterSlaveEntry.setupMasterEntry(new RedisURI(config.getMasterAddress()));
+            CompletableFuture<RedisClient> masterFuture = masterSlaveEntry.setupMasterEntry(new RedisURI(config.getMasterAddress())); /*  启动netty Client & 初始化连接池  */
             masterFuture.join();
 
             if (!config.isSlaveNotUsed()) {
@@ -301,7 +301,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
 
     @Override
     public RedisClient createClient(NodeType type, RedisURI address, String sslHostname) {
-        RedisClient client = createClient(type, address, config.getConnectTimeout(), config.getTimeout(), sslHostname);
+        RedisClient client = createClient(type, address, config.getConnectTimeout(), config.getTimeout(), sslHostname);/* 启动netty Client */
         return client;
     }
 
@@ -313,7 +313,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
 
     protected RedisClient createClient(NodeType type, RedisURI address, int timeout, int commandTimeout, String sslHostname) {
         RedisClientConfig redisConfig = createRedisConfig(type, address, timeout, commandTimeout, sslHostname);
-        return RedisClient.create(redisConfig);
+        return RedisClient.create(redisConfig);/* 启动netty Client */
     }
 
     private RedisClient createClient(NodeType type, InetSocketAddress address, RedisURI uri, int timeout, int commandTimeout, String sslHostname) {
@@ -328,7 +328,7 @@ public class MasterSlaveConnectionManager implements ConnectionManager {
                 .setTimer(serviceManager.getTimer())
                 .setExecutor(serviceManager.getExecutor())
                 .setResolverGroup(serviceManager.getResolverGroup())
-                .setGroup(serviceManager.getGroup())
+                .setGroup(serviceManager.getGroup()) /* worker io线程池 */
                 .setSocketChannelClass(serviceManager.getSocketChannelClass())
                 .setConnectTimeout(timeout)
                 .setCommandTimeout(commandTimeout)

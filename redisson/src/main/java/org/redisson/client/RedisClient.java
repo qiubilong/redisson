@@ -54,7 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class RedisClient {
 
     private final AtomicReference<CompletableFuture<InetSocketAddress>> resolvedAddrFuture = new AtomicReference<>();
-    private final Bootstrap bootstrap;
+    private final Bootstrap bootstrap;/* netty Client */
     private final Bootstrap pubSubBootstrap;
     private final RedisURI uri;
     private InetSocketAddress resolvedAddr;
@@ -115,7 +115,7 @@ public final class RedisClient {
         }
         
         channels = new DefaultChannelGroup(copy.getGroup().next());
-        bootstrap = createBootstrap(copy, Type.PLAIN);
+        bootstrap = createBootstrap(copy, Type.PLAIN);/* 启动netty Client */
         pubSubBootstrap = createBootstrap(copy, Type.PUBSUB);
         
         this.commandTimeout = copy.getCommandTimeout();
@@ -125,7 +125,7 @@ public final class RedisClient {
         Bootstrap bootstrap = new Bootstrap()
                         .resolver(config.getResolverGroup())
                         .channel(config.getSocketChannelClass())
-                        .group(config.getGroup());
+                        .group(config.getGroup());/* io线程池 */
 
         bootstrap.handler(new RedisChannelInitializer(bootstrap, config, this, channels, type));
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, config.getConnectTimeout());
@@ -208,7 +208,7 @@ public final class RedisClient {
         CompletableFuture<InetSocketAddress> addrFuture = resolveAddr();
         CompletableFuture<RedisConnection> f = addrFuture.thenCompose(res -> {
             CompletableFuture<RedisConnection> r = new CompletableFuture<>();
-            ChannelFuture channelFuture = bootstrap.connect(res);
+            ChannelFuture channelFuture = bootstrap.connect(res); /* 连接redis */
             channelFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(final ChannelFuture future) throws Exception {

@@ -56,7 +56,7 @@ public class Config {
 
     private int threads = 16;
 
-    private int nettyThreads = 32;
+    private int nettyThreads = 32; /* 默认 io线程数，是不是太多了 */
 
     private Codec codec;
 

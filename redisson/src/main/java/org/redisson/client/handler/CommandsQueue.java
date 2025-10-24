@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Nikita Koksharov
  *
  */
-public class CommandsQueue extends ChannelDuplexHandler {
+public class CommandsQueue extends ChannelDuplexHandler { /* redis请求 */
 
     public static final AttributeKey<Deque<QueueCommandHolder>> COMMANDS_QUEUE = AttributeKey.valueOf("COMMANDS_QUEUE");
 
@@ -78,14 +78,14 @@ public class CommandsQueue extends ChannelDuplexHandler {
             while (true) {
                 if (lock.compareAndSet(false, true)) {
                     try {
-                        queue.add(holder);
+                        queue.add(holder); /* redis命令写入队列 */
                         try {
                             holder.getChannelPromise().addListener(future -> {
                                 if (!future.isSuccess()) {
                                     queue.remove(holder);
                                 }
                             });
-                            ctx.writeAndFlush(data, holder.getChannelPromise());
+                            ctx.writeAndFlush(data, holder.getChannelPromise()); /* 发到redis服务器 */
                         } catch (Exception e) {
                             queue.remove(holder);
                             throw e;

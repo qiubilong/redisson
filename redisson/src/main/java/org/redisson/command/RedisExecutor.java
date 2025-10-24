@@ -125,7 +125,7 @@ public class RedisExecutor<V, R> {
 
         codec = getCodec(codec);
 
-        CompletableFuture<RedisConnection> connectionFuture = getConnection();
+        CompletableFuture<RedisConnection> connectionFuture = getConnection();/* 获取一个 redis 连接 */
 
         CompletableFuture<R> attemptPromise = new CompletableFuture<>();
         mainPromiseListener = (r, e) -> {
@@ -180,7 +180,7 @@ public class RedisExecutor<V, R> {
                 return;
             }
 
-            sendCommand(attemptPromise, connection);
+            sendCommand(attemptPromise, connection);/* 发送redis请求 */
 
             scheduleWriteTimeout(attemptPromise);
 
@@ -192,7 +192,7 @@ public class RedisExecutor<V, R> {
         attemptPromise.whenComplete((r, e) -> {
             releaseConnection(attemptPromise, connectionFuture);
 
-            checkAttemptPromise(attemptPromise, connectionFuture);
+            checkAttemptPromise(attemptPromise, connectionFuture); /* 唤醒调用者线程 */
         });
     }
 
@@ -614,7 +614,7 @@ public class RedisExecutor<V, R> {
                 log.debug("acquired{}connection for command {} and params {} from slot {} using node {}... {}",
                         connectionType, command, LogHelper.toString(params), source, connection.getRedisClient().getAddr(), connection);
             }
-            writeFuture = connection.send(new CommandData<>(attemptPromise, codec, command, params));
+            writeFuture = connection.send(new CommandData<>(attemptPromise, codec, command, params));/* 发送redis请求 */
 
             if (connectionManager.getServiceManager().getConfig().getMasterConnectionPoolSize() < 10
                     && !command.isBlockingCommand()) {
@@ -667,7 +667,7 @@ public class RedisExecutor<V, R> {
         if (readOnlyMode) {
             connectionFuture = connectionReadOp(command);
         } else {
-            connectionFuture = connectionWriteOp(command);
+            connectionFuture = connectionWriteOp(command);/* 获取一个 redis 连接 */
         }
         return connectionFuture;
     }
@@ -757,7 +757,7 @@ public class RedisExecutor<V, R> {
                 && entry.hasSlave(source.getAddr())) {
             return entry.redirectedConnectionWriteOp(command, source.getAddr());
         }
-        return entry.connectionWriteOp(command);
+        return entry.connectionWriteOp(command);/* 获取一个 redis 连接 */
     }
 
     private MasterSlaveEntry getEntry(boolean read) {

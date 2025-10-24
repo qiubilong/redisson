@@ -67,14 +67,14 @@ abstract class ConnectionPool<T extends RedisConnection> {
     }
 
     public CompletableFuture<Void> initConnections(ClientConnectionsEntry entry) {
-        int minimumIdleSize = getMinimumIdleSize(entry);
+        int minimumIdleSize = getMinimumIdleSize(entry);/* 最小连接数 */
         if (minimumIdleSize == 0) {
             return CompletableFuture.completedFuture(null);
         }
 
         CompletableFuture<Void> initPromise = new CompletableFuture<>();
         AtomicInteger initializedConnections = new AtomicInteger(minimumIdleSize);
-        createConnection(entry, initPromise, minimumIdleSize, initializedConnections);
+        createConnection(entry, initPromise, minimumIdleSize, initializedConnections); /* 连接redis */
         return initPromise;
     }
 
@@ -84,7 +84,7 @@ abstract class ConnectionPool<T extends RedisConnection> {
         CompletableFuture<Void> f = acquireConnection(entry, null);
         f.thenAccept(r -> {
             CompletableFuture<T> promise = new CompletableFuture<T>();
-            createConnection(entry, promise);
+            createConnection(entry, promise); /* 连接redis */
             promise.whenComplete((conn, e) -> {
                 if (e == null) {
                     if (changeUsage()) {
@@ -137,7 +137,7 @@ abstract class ConnectionPool<T extends RedisConnection> {
                         log.info("{} connections initialized for {}", minimumIdleSize, entry.getClient().getAddr());
                     }
                 } else if (value > 0 && !initPromise.isDone()) {
-                    createConnection(entry, initPromise, minimumIdleSize, initializedConnections);
+                    createConnection(entry, initPromise, minimumIdleSize, initializedConnections);/* 循环创建连接 */
                 }
             });
         });

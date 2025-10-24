@@ -1,5 +1,3 @@
-package aaa;
-
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -17,6 +15,8 @@ public class TestMe {
     private static RedissonClient redissonClient;
     private static void initRedisson(){
         Config config = new Config();
+        config.setNettyThreads(2);
+        config.setThreads(Runtime.getRuntime().availableProcessors() * 2);
         config.useSingleServer().setAddress("redis://127.0.0.1:6379");
         redissonClient = Redisson.create(config);
     }

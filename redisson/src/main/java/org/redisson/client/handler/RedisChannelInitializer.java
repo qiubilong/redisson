@@ -87,7 +87,7 @@ public class RedisChannelInitializer extends ChannelInitializer<Channel> {
             CommandBatchEncoder.INSTANCE);
 
         if (type == Type.PLAIN) {
-            ch.pipeline().addLast(new CommandsQueue());
+            ch.pipeline().addLast(new CommandsQueue());/* redis请求 */
         } else {
             ch.pipeline().addLast(new CommandsQueuePubSub());
         }
@@ -97,7 +97,7 @@ public class RedisChannelInitializer extends ChannelInitializer<Channel> {
         }
         
         if (type == Type.PLAIN) {
-            ch.pipeline().addLast(new CommandDecoder(config.getAddress().getScheme()));
+            ch.pipeline().addLast(new CommandDecoder(config.getAddress().getScheme()));/* redis 响应 */
         } else {
             ch.pipeline().addLast(new CommandPubSubDecoder(config));
         }
